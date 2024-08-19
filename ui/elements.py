@@ -3,7 +3,7 @@ import pygame
 from ..core import *
 from typing import Self
 
-class Button(StatedAsset):
+class Button(StatedSprite):
     def __init__(self,
                  rect: pygame.Rect = None,
                  text: str = None,
@@ -50,7 +50,7 @@ class Button(StatedAsset):
 
 
 
-class ProgressBar(StatedAsset):
+class ProgressBar(StatedSprite):
     """
     A progress bar that can be used to show a changing value.
     
@@ -116,11 +116,11 @@ class ProgressBar(StatedAsset):
 
 
 
-class Switch(CombinedAsset):
+class Switch(CombinedSprite):
     def __init__(self,
                  rect: pygame.Rect = None,
-                 body: Asset | None = None,
-                 pointer: Asset | None = None,
+                 body: Sprite | None = None,
+                 pointer: Sprite | None = None,
                  vertical = False):
         
         # Dimension
@@ -143,8 +143,8 @@ class Switch(CombinedAsset):
 
         super().__init__(rect, body, pointer)
 
-        self.pointer: Asset
-        self.body: Asset
+        self.pointer: Sprite
+        self.body: Sprite
 
         self._value = False
 
@@ -166,22 +166,22 @@ class Switch(CombinedAsset):
 
 
 
-class Slider(CombinedAsset):
+class Slider(CombinedSprite):
     """
     A slider with a changable value.
-    If no body and pointer assets are set, the default slider style will be used.
+    If no body and pointer sprites are set, the default slider style will be used.
     """
     def __init__(self, 
                  rect: pygame.Rect | None = None,
-                 body: Asset | None = None,
-                 pointer: Asset | None = None,
+                 body: Sprite | None = None,
+                 pointer: Sprite | None = None,
                  vertical = False):
         """
         A slider with a changable value.
-        If no body and pointer assets are set, the default slider style will be used.
+        If no body and pointer sprites are set, the default slider style will be used.
         """
          
-        #TODO: different slider styles with pre-made assets
+        #TODO: different slider styles with pre-made sprites
 
         # Dimension
         # 0 = horizontal (x); 1 = vertical (y)
@@ -195,7 +195,7 @@ class Slider(CombinedAsset):
                 _brect = pygame.Rect(0,0,rect.w//2,rect.h)
                 _brect.centerx = rect.w//2
 
-            body = StatedAsset(_brect,background=(100,100,100), border=(50,50,50), border_radius=1000)
+            body = StatedSprite(_brect,background=(100,100,100), border=(50,50,50), border_radius=1000)
 
 
         if pointer is None:
@@ -213,8 +213,8 @@ class Slider(CombinedAsset):
 
         super().__init__(rect, body=body, pointer=pointer)
 
-        self.pointer: Asset
-        self.body: Asset
+        self.pointer: Sprite
+        self.body: Sprite
 
 
         self._clicked = False
@@ -222,12 +222,12 @@ class Slider(CombinedAsset):
         self._max_val = 100
 
         @self.pointer.event()
-        def onleftclick(pointer: Asset, isClicked: bool):
+        def onleftclick(pointer: Sprite, isClicked: bool):
             if isClicked:
                 self._clicked = True
 
         @self.pointer.event()
-        def onleftrelease(pointer: Asset, isReleased: bool):
+        def onleftrelease(pointer: Sprite, isReleased: bool):
             if self._clicked and isReleased:
                 self._clicked = False
                 pointer.construct('default')
@@ -281,78 +281,3 @@ class Slider(CombinedAsset):
 
         self.set_pointer_pos(offset + size*progress)
         self._value = val
-
-
-
-
-
-
-
-
-class OldSlider(StatedAsset):
-    """
-    A slider with a changable value.
-    """
-    def __init__(self, rect: pygame.Rect = None, pointer: StatedAsset = None, vertical=False, **style):
-        # Dimension
-        # 0 = horizontal (x); 1 = vertical (y)
-        # in pygame, sizes are always saved as (x,y); 0th index is x, 1st index is y
-        self._dim = int(not vertical)
-
-        self.pointer: StatedAsset = pointer # TODO: make pointer styles
-
-        @self.pointer.event()
-        def onleftclick(pointer: StatedAsset, isClicked: bool):
-            if isClicked:
-                self.clicked = True
-
-            elif self.clicked:
-                self.clicked = False
-
-
-
-        self.clicked = False
-        self.value = 0
-        self.max_val = 100
-
-        super().__init__(rect, **style)
-        
-
-
-            
-    def update(self, delta_time: int = 1) -> None:
-        super().update(delta_time)
-        self.pointer.update(delta_time)
-
-        if self.clicked:
-            # relative mouse pos
-            rmouse_p = pygame.mouse.get_pos()[self._dim] - self.rect.topleft[self._dim]
-
-
-            pointer_pos = min(self.rect.size[self._dim], max(0, rmouse_p))
-
-            # Uptade pointer position
-            if self._dim == 0:
-                self.pointer.rect.left = pointer_pos
-            else:
-                self.pointer.rect.top = pointer_pos
-
-            self.value = pointer_pos // self.rect.size[self._dim]
-            
-
-
-    
-    def _construct(self, reset_image=True, **style):
-        super()._construct(reset_image, **style)
-        self.pointer.draw(self.image)
-
-    def handle_event(self, event: pygame.Event):
-        self.pointer.handle_event(event)
-        super().handle_event(event)
-
-
-
-            
-    
-
-

@@ -172,24 +172,24 @@ class Animation:
 
 class Style(TypedDict):
     """
-    Some assets may not support all Style keys.
+    Some sprites may not support all Style keys.
     
     ### Keys
-    - `image:` image to be displayed on the asset
+    - `image:` image to be displayed on the sprite
     - `img_alpha:` if True, the `image` will be converted with `.convert_alpha`, else with `.convert` (only used if `image` is `str`)
-    - `img_scale:` scale of the `image`. ('auto' means it will match the size of the asset)
+    - `img_scale:` scale of the `image`. ('auto' means it will match the size of the sprite)
 
-    - `anim:` An animation to use instead of an image. Can only be used in `AnimatedAsset` and its subclasses.
+    - `anim:` An animation to use instead of an image. Can only be used in `AnimatedSprite` and its subclasses.
 
-    - `bg:`  background color of the asset
+    - `bg:`  background color of the sprite
 
-    - `border:` border color of the asset
+    - `border:` border color of the sprite
     - `border_width:` width of the `border`
-    - `border_radius:` radius of the rounded corners of the asset .
+    - `border_radius:` radius of the rounded corners of the sprite .
         if a tuple with 4 numbers is given, each corner will be rounded accordingly. 
         if the tuple doesn't have 4 numbers, the remaining spaces will be filled with `-1`'s.
 
-    - `text:`  a text to be displayed on the asset
+    - `text:`  a text to be displayed on the sprite
     - `font:` font of the `text`. (Only used if `text` is set)
     - `text_antialias:` antialias parameter in `Font.render`. (Default: True)
     - `text_color:` color of the text
@@ -198,9 +198,9 @@ class Style(TypedDict):
     
     ### Special Keys 
 
-    These are only used in a few types of assets. If they can be used, it is mentioned in the docstring.
+    These are only used in a few types of sprites. If they can be used, it is mentioned in the docstring.
 
-    - `fg:` foreground color / main color of the asset.
+    - `fg:` foreground color / main color of the sprite.
     - `fg_radius`: same as `border_radius`, but for the foreground.
     - `fg_rect:` rectangle where the foreground is placed. Mostly handled automatically.
     """
@@ -264,15 +264,15 @@ EasingName = Literal[
 
 
 DEFAULT_EVENT_CHECKS = {
-    'onhover': lambda asset,_: asset.rect.collidepoint(pygame.mouse.get_pos()),
-    'onclick': lambda asset,event: event.type == pygame.MOUSEBUTTONDOWN and asset.rect.collidepoint(pygame.mouse.get_pos()),
-    'onleftclick': lambda asset,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0] and asset.rect.collidepoint(pygame.mouse.get_pos()),
-    'onmiddleclick': lambda asset,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[1] and asset.rect.collidepoint(pygame.mouse.get_pos()),
-    'onrightclick': lambda asset,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[2] and asset.rect.collidepoint(pygame.mouse.get_pos()),
-    'onrelease': lambda asset,event: event.type == pygame.MOUSEBUTTONUP,
-    'onleftrelease': lambda asset,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[0],
-    'onmiddlerelease': lambda asset,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[1],
-    'onrightrelease': lambda asset,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[2],
+    'onhover': lambda sprite,_: sprite.rect.collidepoint(pygame.mouse.get_pos()),
+    'onclick': lambda sprite,event: event.type == pygame.MOUSEBUTTONDOWN and sprite.rect.collidepoint(pygame.mouse.get_pos()),
+    'onleftclick': lambda sprite,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0] and sprite.rect.collidepoint(pygame.mouse.get_pos()),
+    'onmiddleclick': lambda sprite,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[1] and sprite.rect.collidepoint(pygame.mouse.get_pos()),
+    'onrightclick': lambda sprite,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[2] and sprite.rect.collidepoint(pygame.mouse.get_pos()),
+    'onrelease': lambda sprite,event: event.type == pygame.MOUSEBUTTONUP,
+    'onleftrelease': lambda sprite,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[0],
+    'onmiddlerelease': lambda sprite,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[1],
+    'onrightrelease': lambda sprite,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[2],
 }
 
 
@@ -280,13 +280,13 @@ DEFAULT_EVENT_CHECKS = {
 
 
 
-class Asset(pygame.sprite.Sprite):
+class Sprite(pygame.sprite.Sprite):
     """
-    Base class for all assets.
+    Base class for all sprites.
 
     ### Parameters:
-    - `image` -> default surface of the asset
-    - `rect` -> rectangle of the asset
+    - `image` -> default surface of the sprite
+    - `rect` -> rectangle of the sprite
     
     > one of these must have a value if you use 'auto'
     """
@@ -313,14 +313,14 @@ class Asset(pygame.sprite.Sprite):
 
     @property
     def nullrect(self):
-        """A copy of the asset's rect at position (0,0)"""
+        """A copy of the sprite's rect at position (0,0)"""
         return pygame.Rect(0,0,self.rect.w,self.rect.h)
 
 
 
     def event(self, check: Callable | EventName = None, name: str = None):
         """
-        An event of the asset. ALWAYS USE WITH BRACKETS
+        An event of the sprite. ALWAYS USE WITH BRACKETS
 
         Calls the function with True or False as the second argument, depending on whether the "check" condition is fulfilled or not.
 
@@ -338,7 +338,7 @@ class Asset(pygame.sprite.Sprite):
 
 
         ### Parameters (optional)
-        - `name`: str -> Name of the event. If not given, the function name is used. Only affects its key in the `Asset.Events` dictionary.
+        - `name`: str -> Name of the event. If not given, the function name is used. Only affects its key in the `Sprite.Events` dictionary.
         - `check`: Callable | EventName -> Condition of the event.
             1. You can use a Callable which returns a boolean
             2. Or one of the default event names. This will use thet event's check but register this as a new event with the given name.
@@ -362,8 +362,8 @@ class Asset(pygame.sprite.Sprite):
 
 
 
-            def wrapper(asset, event, *args, **kwargs):
-                return func(asset, check(asset,event), *args, **kwargs)
+            def wrapper(sprite, event, *args, **kwargs):
+                return func(sprite, check(sprite,event), *args, **kwargs)
 
 
             self.Events[name] = wrapper
@@ -372,24 +372,24 @@ class Asset(pygame.sprite.Sprite):
             return wrapper
         return decorator
 
-    # FIXME: if there are no pygame events, some Assets freeze because their events are not called.
+    # FIXME: if there are no pygame events, some Sprites freeze because their events are not called.
     def handle_event(self, event: pygame.Event):
         """Call this when looping through events."""
-        for assetEvent in self.Events.values():
-            assetEvent(self, event)
+        for spriteEvent in self.Events.values():
+            spriteEvent(self, event)
 
     
     def draw(self, surf: pygame.Surface) -> None:
-        """Draws the asset on the surface."""
+        """Draws the sprite on the surface."""
         surf.blit(self.image, self.rect)
 
 
 
 
 
-class AssetGroup(pygame.sprite.Group):
+class SpriteGroup(pygame.sprite.Group):
     """
-    Group of Assets.
+    Group of Sprites.
     """
     def __init__(self, *elements, **kwds):
         super().__init__(elements)
@@ -398,11 +398,11 @@ class AssetGroup(pygame.sprite.Group):
 
     def handle_event(self, event: pygame.Event):
         """Call this when looping through events."""
-        for asset in self.sprites():
-            asset.handle_event(event)
+        for sprite in self.sprites():
+            sprite.handle_event(event)
 
 
-    def sprites(self) -> List[Asset]:
+    def sprites(self) -> List[Sprite]:
         return super().sprites()
 
 
@@ -410,7 +410,7 @@ class AssetGroup(pygame.sprite.Group):
 
 class Transition:
     """
-    Transition between an asset's states.
+    Transition between an sprite's states.
 
     ### Parameters
     - `time:` (seconds or frames) The duration of the transition. Treated as game frames if the `delta_time` parameter is not used in `Transition.tick`.
@@ -418,7 +418,7 @@ class Transition:
     - `style2:` The style to transition into.
     - `*style_keys:` A list of style keys you want to transition.
     - `_all:` Ignore `style_keys` and transition everything.
-    - `easing:` The easing function to use. See `assets.EASING_FUNCTIONS`
+    - `easing:` The easing function to use. See `sprites.EASING_FUNCTIONS`
     """
     def __init__(self, time: float, style1: Style, style2: Style, *style_keys, _all=False, easing: EasingName | Callable = 'linear') -> None:
         self.finished = False
@@ -523,7 +523,7 @@ class ListedTransition:
 
     - `*style_keys:` A list of style keys you want to transition.
     - `_all:` Ignore `style_keys` and transition everything.
-    - `easing:` The easing function to use. See `assets.EASING_FUNCTIONS`
+    - `easing:` The easing function to use. See `sprites.EASING_FUNCTIONS`
     """
     def __init__(self, time: float, style1: Style, style2: Style, *style_keys, _all=False, easing: EasingName | Callable = 'linear') -> None:
         self.finished = False
@@ -619,10 +619,10 @@ class ListedTransition:
 
 
 
-class StatedAsset(Asset):
+class StatedSprite(Sprite):
     """
     ### Keywords
-    - `Style` keys for the asset's 'default' state
+    - `Style` keys for the sprite's 'default' state
     """
     def __init__(self, rect: pygame.Rect = None, *groups, **style):
         super().__init__(None, rect, *groups)
@@ -795,7 +795,7 @@ class StatedAsset(Asset):
     def construct(self, **style): ...
 
     def construct(self, state: str = None, **style):
-        """Constructs the asset.
+        """Constructs the sprite.
         ### parameters:
          `state`: str -> constructs from the saved states
          `**style`: dict -> constructs from the given style
@@ -820,13 +820,13 @@ class StatedAsset(Asset):
 
     def transition(self, state: str, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', ignore_scheck = False):
         """
-        Transitions the asset to the given state.
+        Transitions the sprite to the given state.
         ### parameters:
         - `time:` (seconds or frames) The duration of the transition. Treated as game frames if the `delta_time` parameter is not used in the `update` method.
         - `state:` The state to transition into.
         - `*style_keys:` A list of style keys you want to transition.
         - `_all:` Ignore `style_keys` and transition everything.
-        - `easing:` The easing function to use. See `assets.EASING_FUNCTIONS`
+        - `easing:` The easing function to use. See `sprites.EASING_FUNCTIONS`
         - `ignore_scheck:` Do the transition even when the selected state is already tha state you are transitioning into.
         """
         if type(state) is str:
@@ -870,36 +870,36 @@ T1 = TypeVar('T1')
 T2 = TypeVar('T2')
 
 
-class GenericCombinedAsset(dict[T1, T2]):
-    """Generic class for CombinedAsset"""
-    def __init__(self, rect: pygame.Rect = None, **assets: T2):
-        """Generic class for CombinedAsset"""
-        super().__init__(**assets)
+class GenericCombinedSprite(dict[T1, T2]):
+    """Generic class for CombinedSprite"""
+    def __init__(self, rect: pygame.Rect = None, **sprites: T2):
+        """Generic class for CombinedSprite"""
+        super().__init__(**sprites)
 
         self.rect = rect
         
 
 
     def update(self, delta_time: float = 1):
-        for asset in self.values():
-            asset.update(delta_time)
+        for sprite in self.values():
+            sprite.update(delta_time)
 
 
     def handle_event(self, event: pygame.Event):
-        for asset in self.values():
-            rect = asset.rect.copy()
-            asset.rect = pygame.Rect(self.rect.left + asset.rect.left,
-                               self.rect.top + asset.rect.top,
-                               asset.rect.width,
-                               asset.rect.height)
-            asset.handle_event(event)
-            asset.rect = rect
+        for sprite in self.values():
+            rect = sprite.rect.copy()
+            sprite.rect = pygame.Rect(self.rect.left + sprite.rect.left,
+                               self.rect.top + sprite.rect.top,
+                               sprite.rect.width,
+                               sprite.rect.height)
+            sprite.handle_event(event)
+            sprite.rect = rect
 
 
     def draw(self, surf: pygame.Surface):
         image = pygame.Surface(self.rect.size, pygame.SRCALPHA)
-        for asset in self.values():
-            asset.draw(image)
+        for sprite in self.values():
+            sprite.draw(image)
 
         surf.blit(image, self.rect)
 
@@ -930,32 +930,32 @@ class GenericCombinedAsset(dict[T1, T2]):
 
 
 
-class CombinedAsset(GenericCombinedAsset[str, Asset]):
+class CombinedSprite(GenericCombinedSprite[str, Sprite]):
     """
-    Base class for all assets that are made up of multiple parts.
+    Base class for all sprites that are made up of multiple parts.
     """
 
     # only needed for docsting
-    def __init__(self, rect: pygame.Rect = None, **assets: Asset):
+    def __init__(self, rect: pygame.Rect = None, **sprites: Sprite):
         """
-        Base class for all assets that are made up of multiple parts.
+        Base class for all sprites that are made up of multiple parts.
         """
-        super().__init__(rect, **assets)
+        super().__init__(rect, **sprites)
 
 
 
 
-class GenericCombinedStatedAsset(GenericCombinedAsset[T1, StatedAsset]):
-    """Generic class for CombinedStatedAsset."""
+class GenericCombinedStatedSprite(GenericCombinedSprite[T1, StatedSprite]):
+    """Generic class for CombinedStatedSprite."""
     
-    def __init__(self, rect: pygame.Rect = None, **assets):
+    def __init__(self, rect: pygame.Rect = None, **sprites):
         
-        super().__init__(rect, **assets)
+        super().__init__(rect, **sprites)
         # EXAMPLE:
         # {
         #     'state1': {
-        #         'asset1': 'hover',
-        #         'asset2': 'default'
+        #         'sprite1': 'hover',
+        #         'sprite2': 'default'
         #     }
         # }
         self.states: dict[str, dict[str, str]] = {
@@ -992,13 +992,13 @@ class GenericCombinedStatedAsset(GenericCombinedAsset[T1, StatedAsset]):
     # FIXME: not working due to ListedTransition not being made yet
     def transition(self, state: str, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', ignore_scheck = False):
         """
-        Transitions the asset to the given state.
+        Transitions the sprite to the given state.
         ### parameters:
         - `time:` (seconds or frames) The duration of the transition. Treated as game frames if the `delta_time` parameter is not used in the `update` method.
         - `state:` The state to transition into.
         - `*style_keys:` A list of style keys you want to transition.
         - `_all:` Ignore `style_keys` and transition everything.
-        - `easing:` The easing function to use. See `assets.EASING_FUNCTIONS`
+        - `easing:` The easing function to use. See `sprites.EASING_FUNCTIONS`
         - `ignore_scheck:` Do the transition even when the selected state is already tha state you are transitioning into.
         """
         raise Exception('This is not working yet.')
@@ -1027,19 +1027,19 @@ class GenericCombinedStatedAsset(GenericCombinedAsset[T1, StatedAsset]):
 
 
 
-class CombinedStatedAsset(GenericCombinedStatedAsset[str, StatedAsset]):
-    """Base class for all assets that are made up of multiple stated assets. You can can create general states which include multiple assets."""
+class CombinedStatedSprite(GenericCombinedStatedSprite[str, StatedSprite]):
+    """Base class for all sprites that are made up of multiple stated sprites. You can can create general states which include multiple sprites."""
 
     # only needed for docstring
-    def __init__(self, rect: pygame.Rect = None, **assets):
-        """Base class for all assets that are made up of multiple stated assets. You can can create general states which include multiple assets."""
-        super().__init__(rect, **assets)
+    def __init__(self, rect: pygame.Rect = None, **sprites):
+        """Base class for all sprites that are made up of multiple stated sprites. You can can create general states which include multiple sprites."""
+        super().__init__(rect, **sprites)
 
 
 
-class AnimatedAsset(StatedAsset):
+class AnimatedSprite(StatedSprite):
     """
-    A StatedAsset which accepts animations in states.
+    A StatedSprite which accepts animations in states.
     
     ### 
     """
