@@ -1,0 +1,4 @@
+
+
+class IncorrectColorError(Exception):
+    pass
