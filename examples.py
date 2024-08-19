@@ -4,12 +4,12 @@ from random import randint
 
 # EVENTS
 
-myasset = assets.Asset(rect = '')
+myasset = assets.Sprite(rect = '')
 
 
 # Default Event
 @myasset.event()
-def onhover(asset: assets.Asset, isHovered: bool): # the parameters are always these
+def onhover(asset: assets.Sprite, isHovered: bool): # the parameters are always these
     if isHovered:
         asset.image.fill((255,0,0))
     else:
@@ -23,7 +23,7 @@ def onhover(asset: assets.Asset, isHovered: bool): # the parameters are always t
 mycheck = lambda asset,event: asset.rect.colliderect(pygame.mouse.get_pos()) and event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE
 
 @myasset.event(check = mycheck, name = 'space_pressed') # name is optional
-def pressing_space(asset: assets.Asset, pressing_it: bool): # the parameters are always these
+def pressing_space(asset: assets.Sprite, pressing_it: bool): # the parameters are always these
     if pressing_it:
         # do some stuff
         myasset.image.fill((randint(0,255),randint(0,255),randint(0,255)))
