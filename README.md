@@ -94,4 +94,4 @@ Currently only a few basic ones are available.
 
 
 
-This is only a superficial documentation of the library, I will improve it later.
+This is only a superficial presentation of the library, I will improve it later.
