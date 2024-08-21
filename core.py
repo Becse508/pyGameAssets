@@ -1,7 +1,7 @@
-from collections.abc import Iterator
 import pygame
-from typing import Any, List, Literal, Union, Sequence, overload, TypedDict, Self, Callable, TypeVar
+from typing import Any, Iterable, List, Literal, Union, Sequence, overload, TypedDict, Self, Callable, TypeVar
 from os import listdir
+
 from .exceptions import *
 from .easing import EASING_FUNCTIONS
 pygame.init()
@@ -397,9 +397,9 @@ class Sprite(pygame.sprite.Sprite):
 
 
 
-class SpriteGroup(pygame.sprite.Group):
+class SpriteGroup(pygame.sprite.AbstractGroup):
     """
-    Group of Sprites. NOT WORKING YET
+    Group of Sprites.
     """
     def __init__(self, *elements):
         super().__init__(*elements)
@@ -418,6 +418,38 @@ class SpriteGroup(pygame.sprite.Group):
 
     def update(self, delta_time: float, *args, **kwds):
         super().update(delta_time=delta_time, *args, **kwds)
+
+
+    # Copied from pygame and modified
+    def add(self, *sprites: Any | pygame.sprite.AbstractGroup | Iterable):
+        for sprite in sprites:
+            # It's possible that some sprite is also an iterator.
+            # If this is the case, we should add the sprite itself,
+            # and not the iterator object.
+            if isinstance(sprite, Sprite):
+                if not self.has_internal(sprite):
+                    self.add_internal(sprite)
+                    sprite.add_internal(self)
+            elif isinstance(sprite, GenericCombinedSprite):
+                raise TypeError('You cannot put CombinedSprites in a group!')
+            else:
+                try:
+                    # See if sprite is an iterator, like a list or sprite
+                    # group.
+                    self.add(*sprite)
+                except (TypeError, AttributeError):
+                    # Not iterable. This is probably a sprite that is not an
+                    # instance of the Sprite class or is not an instance of a
+                    # subclass of the Sprite class. Alternately, it could be an
+                    # old-style sprite group.
+                    if hasattr(sprite, "_spritegroup"):
+                        for spr in sprite.sprites():
+                            if not self.has_internal(spr):
+                                self.add_internal(spr)
+                                spr.add_internal(self)
+                    elif not self.has_internal(sprite):
+                        self.add_internal(sprite)
+                        sprite.add_internal(self)
 
 
 
