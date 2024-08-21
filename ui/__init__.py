@@ -1,1 +1,1 @@
-from .elements import Button, ProgressBar, Slider
+from .elements import Button, ProgressBar, Slider, Switch

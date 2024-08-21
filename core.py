@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 import pygame
 from typing import Any, List, Literal, Union, Sequence, overload, TypedDict, Self, Callable, TypeVar
 from os import listdir
@@ -14,6 +15,7 @@ FONTS = {
 RGBValue = Sequence[int]
 ColorValue = Union[int, str, Sequence[int]] # copied from pygame
 Coordinate = Sequence[float] # copied from pygame
+
 
 
 
@@ -228,8 +230,16 @@ class Style(TypedDict):
     anim: Animation
 
 
-
 State = Style # if someone likes this word more
+CombinedStyle = dict[str, dict[str, str | Style]] # used for CombinedStatedSprites
+
+    
+
+
+
+
+
+
 EventName = Literal['onhover','onclick','onleftclick','onmiddleclick','onrightclick','onrelease','onleftrelease','onmiddlerelease','onrightrelease']
 EasingName = Literal[
     "linear",
@@ -307,7 +317,7 @@ class Sprite(pygame.sprite.Sprite):
         self.Events = {}
 
 
-    def update(self, delta_time: float = 1, *args: Any, **kwargs: Any) -> None:
+    def update(self, delta_time: float = 1, *args: Any, **kwds: Any) -> None:
         self.handle_event(pygame.Event(0, {}))
 
 
@@ -389,10 +399,10 @@ class Sprite(pygame.sprite.Sprite):
 
 class SpriteGroup(pygame.sprite.Group):
     """
-    Group of Sprites.
+    Group of Sprites. NOT WORKING YET
     """
-    def __init__(self, *elements, **kwds):
-        super().__init__(elements)
+    def __init__(self, *elements):
+        super().__init__(*elements)
 
 
 
@@ -404,6 +414,10 @@ class SpriteGroup(pygame.sprite.Group):
 
     def sprites(self) -> List[Sprite]:
         return super().sprites()
+    
+
+    def update(self, delta_time: float, *args, **kwds):
+        super().update(delta_time=delta_time, *args, **kwds)
 
 
 
@@ -429,6 +443,7 @@ class Transition:
             self.easing_func = EASING_FUNCTIONS.get(easing)
             if self.easing_func is None:
                 raise KeyError(f"Invalid easing function: '{easing}'")
+            
         elif type(easing) is Callable:
             self.easing_func = easing
         else:
@@ -437,7 +452,7 @@ class Transition:
 
 
         self.style_keys = set(*style_keys)
-        if _all:
+        if _all or not style_keys:
             self.style_keys = set(style1.keys()).union(set(style2.keys()))
 
 
@@ -508,112 +523,6 @@ class Transition:
 
 
         return self.style
-
-
-# TODO: make this
-class ListedTransition:
-    """
-    Transition between multiple styles.
-
-    ### Parameters
-    - `time:` (seconds or frames) The duration of the transition. Treated as game frames if the `delta_time` parameter is not used in `Transition.tick`.
-
-    - `style1list:` The list of styles from which the transition starts.
-    - `style2list:` The list of styles to transition into.
-
-    - `*style_keys:` A list of style keys you want to transition.
-    - `_all:` Ignore `style_keys` and transition everything.
-    - `easing:` The easing function to use. See `sprites.EASING_FUNCTIONS`
-    """
-    def __init__(self, time: float, style1: Style, style2: Style, *style_keys, _all=False, easing: EasingName | Callable = 'linear') -> None:
-        self.finished = False
-        self.time = time
-        self.current_time = 0
-
-        if type(easing) is str:
-            self.easing_func = EASING_FUNCTIONS.get(easing)
-            if self.easing_func is None:
-                raise KeyError(f"Invalid easing function: '{easing}'")
-        elif type(easing) is Callable:
-            self.easing_func = easing
-        else:
-            raise TypeError("The easing must be either 'str' or 'Callable'")
-
-
-
-        self.style_keys = set(*style_keys)
-        if _all:
-            self.style_keys = set(style1.keys()).union(set(style2.keys()))
-
-
-        self.style1 = style1.copy()
-        self.style2 = style2.copy()
-
-
-        _to_remove = set()
-        # Make all values the same type
-        for key in self.style_keys:
-            s1_val = self.style1.get(key)
-            s2_val = self.style2.get(key)
-
-            # Remove not used keys from self.style_keys
-            if s1_val is None and s2_val is None:
-                _to_remove.add(key)
-                continue
-            
-            # All colors must be in RGBA format
-            if key in ('bg','fg','border','text_color'):
-                if type(s1_val) in (str,int):
-                    raise IncorrectColorError(f"'{s1_val}' can not be accepted in a Transition. The color value must be a sequence of integers (RGB / RGBA).")
-                if type(s2_val) in (str,int):
-                    raise IncorrectColorError(f"'{s2_val}' can not be accepted in a Transition. The color value must be a sequence of integers (RGB / RGBA).")
-            
-                self.style1[key] = list(to_rgba(s1_val))
-                self.style2[key] = list(to_rgba(s2_val))
-
-
-            elif key in ('border_radius','fg_radius'):
-                self.style1[key] = list(radius_kwds(s1_val, True))
-                self.style2[key] = list(radius_kwds(s2_val, True))
-
-            
-
-
-        self.style_keys = self.style_keys.difference(_to_remove)
-
-
-        self.style: Style = self.style1.copy()
-
-
-
-    
-    def tick(self, delta_time: float = 1) -> Style:
-        """Calculate next frame of the transition."""
-        self.current_time += delta_time
-        progress = self.easing_func(self.current_time / self.time)
-
-
-        for key in self.style_keys:
-            s1_val = self.style1[key]
-            s2_val = self.style2[key]
-            
-            
-            if key in ('bg','fg','border','text_color','border_radius','fg_radius'):
-                for i in range(4):
-                    diff = s2_val[i] - s1_val[i]
-                    if key in ('border_radius', 'fg_radius'):
-                        self.style[key][i] = round(s1_val[i] + diff * progress)
-                    else:
-                        # must be a valid color value
-                        self.style[key][i] = min(max(round(s1_val[i] + diff * progress), 0), 255)
-                    
-
-        if self.current_time >= self.time:
-            self.finished = True
-
-
-        return self.style
-
 
 
 
@@ -732,16 +641,16 @@ class StatedSprite(Sprite):
 
 
         # FIXME: removing stuff outside the border radius
-        if border_radius:
-            wh = min((self.rect.h//2,self.rect.w//2))
-            if border_radius['border_top_left_radius'] > wh:
-                border_radius['border_top_left_radius'] = wh
-            if border_radius['border_top_right_radius'] > wh:
-                border_radius['border_top_right_radius'] = wh
-            if border_radius['border_bottom_left_radius'] > wh:
-                border_radius['border_bottom_left_radius'] = wh
-            if border_radius['border_bottom_right_radius'] > wh:
-                border_radius['border_bottom_right_radius'] = wh
+        # if border_radius:
+        #     wh = min((self.rect.h//2,self.rect.w//2))
+        #     if border_radius['border_top_left_radius'] > wh:
+        #         border_radius['border_top_left_radius'] = wh
+        #     if border_radius['border_top_right_radius'] > wh:
+        #         border_radius['border_top_right_radius'] = wh
+        #     if border_radius['border_bottom_left_radius'] > wh:
+        #         border_radius['border_bottom_left_radius'] = wh
+        #     if border_radius['border_bottom_right_radius'] > wh:
+        #         border_radius['border_bottom_right_radius'] = wh
             
 
             # dist = round(sqrt(border_radius['border_top_left_radius']**2*2)-border_radius['border_top_left_radius'])
@@ -920,13 +829,15 @@ class GenericCombinedSprite(dict[T1, T2]):
         else:
             super().__setattr__(name, value)
 
-        print(name, value)
 
     def __setitem__(self, key: T1, value: T2) -> None:
         if super().__getattribute__(key):
             raise KeyError(f"'{key}' is already an attribute of this object! You cannot have items named the same as attributes.")
         super().__setitem__(key, value)
 
+
+    def __iter__(self):
+        raise TypeError(f'{self.__class__} is not iterable. Did you mean {self.__class__}.values()?')
 
 
 
@@ -944,8 +855,8 @@ class CombinedSprite(GenericCombinedSprite[str, Sprite]):
 
 
 
-
-class GenericCombinedStatedSprite(GenericCombinedSprite[T1, StatedSprite]):
+# TODO: replace StatedSprite with T2
+class GenericCombinedStatedSprite(GenericCombinedSprite[T1, T2]):
     """Generic class for CombinedStatedSprite."""
     
     def __init__(self, rect: pygame.Rect = None, **sprites):
@@ -956,20 +867,21 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, StatedSprite]):
         #     'state1': {
         #         'sprite1': 'hover',
         #         'sprite2': 'default'
+        #         'sprite3': {'bg': 'red', 'border': 'blue'}
         #     }
         # }
-        self.states: dict[str, dict[str, str]] = {
-            'default': {key: value.states['default'] for key, value in self.items()},
+        #
+        self.states: CombinedStyle = {
+            'default': {key: 'default' for key in self.keys()},
         }
 
         self.selected_state = 'default'
 
-        self._transition = None
         self.style = self.states[self.selected_state].copy()
 
     
 
-    def change_style(self, state: str | dict[str, dict[str, str]] | None, change_selected = True):
+    def change_style(self, state: str | CombinedStyle | None, change_selected = True):
         if type(state) is str:
             if not self.states.get(state):
                 raise KeyError(f'{state} is not a valid state. (not in {self.__class__}.states)')
@@ -988,8 +900,29 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, StatedSprite]):
             if change_selected:
                 self.selected_state = None
 
+        for key, sprite in self.items():
+            if key in self.style:
+                sprite.change_style(self.style[key])
+        
+        
 
-    # FIXME: not working due to ListedTransition not being made yet
+
+
+    # TODO: make this
+    def construct(self, style: str | CombinedStyle | None):
+        """Constructs all of its Sprites from the selected style."""
+        if type(style) is str:
+            for key, sprite in self.items():
+                sprite.construct(style[key])
+        
+        elif type(style) is CombinedStyle:
+            for key, sprite in self.items():
+                sprite.construct(style[key])
+            
+        
+
+
+    # TODO: Improve for custom parameters per sprite.
     def transition(self, state: str, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', ignore_scheck = False):
         """
         Transitions the sprite to the given state.
@@ -999,9 +932,9 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, StatedSprite]):
         - `*style_keys:` A list of style keys you want to transition.
         - `_all:` Ignore `style_keys` and transition everything.
         - `easing:` The easing function to use. See `sprites.EASING_FUNCTIONS`
-        - `ignore_scheck:` Do the transition even when the selected state is already tha state you are transitioning into.
+        - `ignore_scheck:` Do the transition even when the selected state is already the state you are transitioning into.
         """
-        raise Exception('This is not working yet.')
+        # raise Exception('This is not working yet.')
         if type(state) is str:
             if not ignore_scheck:
                 if state == self.selected_state:
@@ -1011,12 +944,11 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, StatedSprite]):
                 raise KeyError(f'{state} is not a valid state. (not in {self.__class__}.states)')
             
 
-            # NOTE: removed so you can smoothly change the selected state's values.
+            self.change_style(state)
             
-            _state = self.states[state]
-            self._transition = None
-            self._transition = Transition(time, self.style, _state,style_keys, _all=_all, easing=easing)
-            self.selected_state = state
+            for key, sprite in self.items():
+                sprite.transition(state[key], time, style_keys, _all=_all, easing=easing, ignore_scheck=ignore_scheck)
+
 
 
     
@@ -1135,7 +1067,7 @@ def radius_kwds(val: int | tuple[int, int, int, int], only_tuple = False):
     if only_tuple:
         return val
     
-    
+     
     if len(val) < 4:
         val = [*val]
         val.extend([-1 for _ in range(4-len(val))])
@@ -1161,3 +1093,5 @@ def to_rgba(color: ColorValue | None) -> tuple[int,int,int,int]:
             color.extend([255 for _ in range(4-len(color))])
     
     return tuple(color)
+
+

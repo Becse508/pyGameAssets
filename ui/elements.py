@@ -116,11 +116,11 @@ class ProgressBar(StatedSprite):
 
 
 
-class Switch(CombinedSprite):
+class Switch(CombinedStatedSprite):
     def __init__(self,
                  rect: pygame.Rect = None,
-                 body: Sprite | None = None,
-                 pointer: Sprite | None = None,
+                 body: StatedSprite | None = None,
+                 pointer: StatedSprite | None = None,
                  vertical = False):
         
         # Dimension
@@ -139,14 +139,24 @@ class Switch(CombinedSprite):
         def onclick(isClicked):
             if isClicked:
                 self.switch()
+                self.construct(str(self._value))
 
 
-        super().__init__(rect, body, pointer)
+        super().__init__(rect, body=body, pointer=pointer)
 
-        self.pointer: Sprite
-        self.body: Sprite
+        self.pointer: StatedSprite
+        self.body: StatedSprite
 
         self._value = False
+
+
+        self.states['0'] = self.states['default'].copy()
+        del self.states['default']
+        self.states['1'] = {
+            'body': ''
+
+        }
+
 
 
     @property

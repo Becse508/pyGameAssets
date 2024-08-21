@@ -26,7 +26,7 @@ A hierarchy of sprite classes:
 
 
 - #### SpriteGroup
-    No functionality yet.
+    NOT WORKING YET
 
 
 - #### StatedSprite
