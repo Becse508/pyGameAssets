@@ -528,8 +528,6 @@ class Transition:
 
         self.style: Style = self.style1.copy()
 
-        print(self.style1, self.style2)
-        print(self.style_keys)
 
 
 
@@ -618,7 +616,7 @@ class StatedSprite(Sprite):
                     if rect[i] == 'auto':
                         rect[i] = self.rect[i]
                         
-            print(rect)
+
             self.rect = pygame.Rect(rect)
 
 
