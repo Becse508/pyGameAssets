@@ -177,34 +177,37 @@ class Style(TypedDict):
     Some sprites may not support all Style keys.
     
     ### Keys
-    - `image:` image to be displayed on the sprite
-    - `img_alpha:` if True, the `image` will be converted with `.convert_alpha`, else with `.convert` (only used if `image` is `str`)
-    - `img_scale:` scale of the `image`. ('auto' means it will match the size of the sprite)
+    - `image`: *Surface | str (filepath)* -> Image to be displayed on the sprite.
+    - `img_alpha`: *bool* -> If True, the `image` will be converted with `.convert_alpha`, else with `.convert` (only used if `image` is `str`).
+    - `img_scale`: *Coordinate | Literal['auto']* -> Scale of the `image`. ('auto' means it will match the size of the sprite)
 
-    - `anim:` An animation to use instead of an image. Can only be used in `AnimatedSprite` and its subclasses.
+    - `anim`: *Animation* -> An animation to use instead of an image. Can only be used in `AnimatedSprite` and its subclasses.
 
-    - `bg:`  background color of the sprite
+    - `bg`: *ColorValue* -> Background color of the sprite.
 
-    - `border:` border color of the sprite
-    - `border_width:` width of the `border`
-    - `border_radius:` radius of the rounded corners of the sprite .
-        if a tuple with 4 numbers is given, each corner will be rounded accordingly. 
-        if the tuple doesn't have 4 numbers, the remaining spaces will be filled with `-1`'s.
+    - `border`: *ColorValue* -> Border color of the sprite.
+    - `border_width`: *int* -> Width of the `border`.
+    - `border_radius`: *int | tuple* -> Radius of the rounded corners of the sprite.
+        If a tuple with 4 numbers is given, each corner will be rounded accordingly. 
+        If the tuple doesn't have 4 numbers, the remaining spaces will be filled with `-1`'s.
 
-    - `text:`  a text to be displayed on the sprite
-    - `font:` font of the `text`. (Only used if `text` is set)
-    - `text_antialias:` antialias parameter in `Font.render`. (Default: True)
-    - `text_color:` color of the text
-    - `text_pos:` position of the text. if not set, automatic centering is used. (Only used if `text` is set)
+    - `text`: *str* -> A text to be displayed on the sprite.
+    - `font`: *Font* -> Font of the `text`. (Only used if `text` is set)
+    - `text_antialias`: *bool* -> Antialias parameter in `Font.render`. (Default: True)
+    - `text_color`: *ColorValue* -> Color of the text.
+    - `text_pos`: *Coordinate* -> Position of the text. if not set, automatic centering is used. (Only used if `text` is set)
+
+    - `rect`: *Sequence[int | Literal['auto']]* -> Rectangle of the sprite. If an element is 'auto', the current rectangle will be used for that element.
+    - `check_rect_auto`: *bool* -> Whether to check if the rect value contains any 'auto's.
 
     
     ### Special Keys 
 
     These are only used in a few types of sprites. If they can be used, it is mentioned in the docstring.
 
-    - `fg:` foreground color / main color of the sprite.
-    - `fg_radius`: same as `border_radius`, but for the foreground.
-    - `fg_rect:` rectangle where the foreground is placed. Mostly handled automatically.
+    - `fg`: *ColorValue* -> Foreground color / main color of the sprite.
+    - `fg_radius`: *int | tuple* -> Same as `border_radius`, but for the foreground.
+    - `fg_rect`: *Rect* -> Rectangle where the foreground is placed. Mostly handled automatically.
     """
 
     bg: ColorValue
@@ -229,14 +232,14 @@ class Style(TypedDict):
 
     anim: Animation
 
+    rect: Sequence[int | Literal['auto']]
+    check_rect_auto: bool
+
 
 State = Style # if someone likes this word more
 CombinedStyle = dict[str, dict[str, str | Style]] # used for CombinedStatedSprites
 
     
-
-
-
 
 
 
@@ -397,7 +400,7 @@ class Sprite(pygame.sprite.Sprite):
 
 
 
-class SpriteGroup(pygame.sprite.AbstractGroup):
+class SpriteGroup(pygame.sprite.Group):
     """
     Group of Sprites.
     """
@@ -410,10 +413,6 @@ class SpriteGroup(pygame.sprite.AbstractGroup):
         """Call this when looping through events."""
         for sprite in self.sprites():
             sprite.handle_event(event)
-
-
-    def sprites(self) -> List[Sprite]:
-        return super().sprites()
     
 
     def update(self, delta_time: float, *args, **kwds):
@@ -430,8 +429,8 @@ class SpriteGroup(pygame.sprite.AbstractGroup):
                 if not self.has_internal(sprite):
                     self.add_internal(sprite)
                     sprite.add_internal(self)
-            elif isinstance(sprite, GenericCombinedSprite):
-                raise TypeError('You cannot put CombinedSprites in a group!')
+            # elif isinstance(sprite, GenericCombinedSprite):
+            #     raise TypeError('You cannot put CombinedSprites in a group!')
             else:
                 try:
                     # See if sprite is an iterator, like a list or sprite
@@ -456,7 +455,7 @@ class SpriteGroup(pygame.sprite.AbstractGroup):
 
 class Transition:
     """
-    Transition between an sprite's states.
+    Transition between a sprite's states.
 
     ### Parameters
     - `time:` (seconds or frames) The duration of the transition. Treated as game frames if the `delta_time` parameter is not used in `Transition.tick`.
@@ -484,12 +483,16 @@ class Transition:
 
 
         self.style_keys = set(*style_keys)
-        if _all or not style_keys:
+        if _all:
             self.style_keys = set(style1.keys()).union(set(style2.keys()))
+        elif not style_keys:
+            self.style_keys = set(style2.keys())
+
 
 
         self.style1 = style1.copy()
         self.style2 = style2.copy()
+
 
 
         _to_remove = set()
@@ -499,16 +502,16 @@ class Transition:
             s2_val = self.style2.get(key)
 
             # Remove not used keys from self.style_keys
-            if s1_val is None and s2_val is None:
+            if s2_val is None:
                 _to_remove.add(key)
                 continue
             
             # All colors must be in RGBA format
             if key in ('bg','fg','border','text_color'):
                 if type(s1_val) in (str,int):
-                    raise IncorrectColorError(f"'{s1_val}' can not be accepted in a Transition. The color value must be a sequence of integers (RGB / RGBA).")
+                    raise IncorrectColorError(f"'{s1_val}' can not be accepted in a Transition. The color value must be a sequence of integers (RGB or RGBA).")
                 if type(s2_val) in (str,int):
-                    raise IncorrectColorError(f"'{s2_val}' can not be accepted in a Transition. The color value must be a sequence of integers (RGB / RGBA).")
+                    raise IncorrectColorError(f"'{s2_val}' can not be accepted in a Transition. The color value must be a sequence of integers (RGB or RGBA).")
             
                 self.style1[key] = list(to_rgba(s1_val))
                 self.style2[key] = list(to_rgba(s2_val))
@@ -518,13 +521,15 @@ class Transition:
                 self.style1[key] = list(radius_kwds(s1_val, True))
                 self.style2[key] = list(radius_kwds(s2_val, True))
 
-            
 
 
         self.style_keys = self.style_keys.difference(_to_remove)
 
 
         self.style: Style = self.style1.copy()
+
+        print(self.style1, self.style2)
+        print(self.style_keys)
 
 
 
@@ -540,14 +545,14 @@ class Transition:
             s2_val = self.style2[key]
             
             
-            if key in ('bg','fg','border','text_color','border_radius','fg_radius'):
+            if key in ('bg','fg','border','text_color','border_radius','fg_radius','rect'):
                 for i in range(4):
                     diff = s2_val[i] - s1_val[i]
-                    if key in ('border_radius', 'fg_radius'):
-                        self.style[key][i] = round(s1_val[i] + diff * progress)
-                    else:
+                    if key in ('bg','fg','border','text_color'):
                         # must be a valid color value
                         self.style[key][i] = min(max(round(s1_val[i] + diff * progress), 0), 255)
+                    else:
+                        self.style[key][i] = round(s1_val[i] + diff * progress)
                     
 
         if self.current_time >= self.time:
@@ -605,8 +610,20 @@ class StatedSprite(Sprite):
     def _construct(self, reset_image=True, **style):
         """Do not use this. This does not change the selected state variable."""
         
+        rect = style.get('rect')
+        if rect:
+            if style.get('check_rect_auto', True):
+                rect = [*rect]
+                for i in range(4):
+                    if rect[i] == 'auto':
+                        rect[i] = self.rect[i]
+                        
+            print(rect)
+            self.rect = pygame.Rect(rect)
+
+
         if reset_image:
-            self.image = pygame.Surface(self.image.get_size(), pygame.SRCALPHA)
+            self.image = pygame.Surface(self.rect.size, pygame.SRCALPHA)
         
         border_width = style.get('border_width', 2)
         border_radius = radius_kwds(style.get('border_radius'))
@@ -759,7 +776,7 @@ class StatedSprite(Sprite):
 
 
 
-    def transition(self, state: str, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', ignore_scheck = False):
+    def transition(self, state: str | Style, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', ignore_scheck = False):
         """
         Transitions the sprite to the given state.
         ### parameters:
@@ -778,13 +795,31 @@ class StatedSprite(Sprite):
             if not self.states.get(state):
                 raise KeyError(f'{state} is not a valid state. (not in {self.__class__}.states)')
             
-
-            # NOTE: removed so you can smoothly change the selected state's values.
             
             _state = self.states[state]
-            self._transition = None
-            self._transition = Transition(time, self.style, _state,style_keys, _all=_all, easing=easing)
             self.selected_state = state
+
+        else:
+            _state = state
+            self.selected_state = None
+
+
+        rect = _state.get('rect')
+        if rect:
+            rect = [*rect]
+            if _state.get('check_rect_auto', True):
+                for i in range(4):
+                    if rect[i] == 'auto':
+                        rect[i] = self.rect[i]
+
+            _state['rect'] = rect
+            _state['check_rect_auto'] = False
+        
+        self.style['rect'] = [*self.rect]
+
+        
+        self._transition = None
+        self._transition = Transition(time, self.style, _state,style_keys, _all=_all, easing=easing)
             
 
     
@@ -869,7 +904,8 @@ class GenericCombinedSprite(dict[T1, T2]):
 
 
     def __iter__(self):
-        raise TypeError(f'{self.__class__} is not iterable. Did you mean {self.__class__}.values()?')
+        # raise TypeError(f'{self.__class__} is not iterable. Did you mean {self.__class__}.values()?')
+        return iter(self.values())
 
 
 

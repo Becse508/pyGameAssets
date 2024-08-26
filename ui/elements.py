@@ -291,3 +291,22 @@ class Slider(CombinedSprite):
 
         self.set_pointer_pos(offset + size*progress)
         self._value = val
+
+    
+    def set_value(self, val: float, transition=False):
+        size = self.rect.size[self._dim] - self.pointer.rect.size[self._dim] # the distance the center of the pointer can make without going outside the slider borders
+        offset = self.pointer.rect.size[self._dim]//2
+        progress = val / self._max_val
+
+        self._value = val
+        if transition:
+            if self._dim == 0:
+                style: Style = {'rect': (round(offset + size*progress), 'auto', 'auto', 'auto')}
+            else:
+                style: Style = {'rect': ('auto', round(offset + size*progress), 'auto', 'auto')}
+            
+            self.pointer: StatedSprite
+            self.pointer.transition(style, .2, 'rect', easing='cubic_in')
+
+        else:
+            self.set_pointer_pos(offset + size*progress)
