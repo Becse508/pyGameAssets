@@ -69,6 +69,7 @@ A hierarchy of sprite classes:
 ### Transition
 Smooth transitions between two states of a `sprite` or a `CombinedSprite`.
 - DOES NOT WORK WITH `CombinedSprite`s YET.
+- some easing functions might be buggy with some style keys.
 - 25 predifined easing functions
 - works with custom ones as well
 
