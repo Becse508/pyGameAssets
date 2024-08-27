@@ -1,7 +1,9 @@
 from _collections_abc import dict_values
 import pygame
-from ..core import *
 from typing import Self
+from ..sprite import *
+
+
 
 class Button(StatedSprite):
     def __init__(self,
@@ -291,8 +293,10 @@ class Slider(CombinedSprite):
 
         self.set_pointer_pos(offset + size*progress)
         self._value = val
+        self.callback(val)
 
     
+    # FIXME: the pointer can move a bit past the slider borders.
     def set_value(self, val: float, transition=False):
         size = self.rect.size[self._dim] - self.pointer.rect.size[self._dim] # the distance the center of the pointer can make without going outside the slider borders
         offset = self.pointer.rect.size[self._dim]//2
@@ -310,3 +314,5 @@ class Slider(CombinedSprite):
 
         else:
             self.set_pointer_pos(offset + size*progress)
+
+        self.callback(val)
