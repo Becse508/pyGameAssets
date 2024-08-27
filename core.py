@@ -282,10 +282,10 @@ DEFAULT_EVENT_CHECKS = {
     'onleftclick': lambda sprite,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0] and sprite.rect.collidepoint(pygame.mouse.get_pos()),
     'onmiddleclick': lambda sprite,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[1] and sprite.rect.collidepoint(pygame.mouse.get_pos()),
     'onrightclick': lambda sprite,event: event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[2] and sprite.rect.collidepoint(pygame.mouse.get_pos()),
-    'onrelease': lambda sprite,event: event.type == pygame.MOUSEBUTTONUP,
-    'onleftrelease': lambda sprite,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[0],
-    'onmiddlerelease': lambda sprite,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[1],
-    'onrightrelease': lambda sprite,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[2],
+    'onrelease': lambda _,event: event.type == pygame.MOUSEBUTTONUP,
+    'onleftrelease': lambda _,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[0],
+    'onmiddlerelease': lambda _,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[1],
+    'onrightrelease': lambda _,event: event.type == pygame.MOUSEBUTTONUP and not pygame.mouse.get_pressed()[2],
 }
 
 
@@ -331,7 +331,7 @@ class Sprite(pygame.sprite.Sprite):
 
 
 
-    def event(self, check: Callable | EventName = None, name: str = None):
+    def event(self, check: Callable | EventName | None = None, name: str | None = None):
         """
         An event of the sprite. ALWAYS USE WITH BRACKETS
 
@@ -376,7 +376,7 @@ class Sprite(pygame.sprite.Sprite):
 
 
             def wrapper(sprite, event, *args, **kwargs):
-                return func(sprite, check(sprite,event), *args, **kwargs)
+                return func(check(sprite,event), *args, **kwargs)
 
 
             self.Events[name] = wrapper

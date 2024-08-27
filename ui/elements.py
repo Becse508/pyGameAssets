@@ -37,7 +37,7 @@ class Button(StatedSprite):
 
         # Events
         @self.event()
-        def onhover(self: Self, isHovered: bool):
+        def onhover(isHovered: bool):
             if isHovered and self.selected_state != 'hover':
                 self.construct('hover')
 
@@ -212,7 +212,7 @@ class Slider(CombinedSprite):
             pointer = Button(pygame.Rect(0,0,rect.size[self._dim-1],rect.size[self._dim-1]), bg=(50,50,50), border=(0,0,0), border_radius=1000)
 
         @pointer.event()
-        def onhover(pointer: Button, isHovered: bool):
+        def onhover(isHovered: bool):
             if isHovered and pointer.selected_state != 'hover' and not self._clicked:
                 pointer.construct('hover')
 
@@ -232,12 +232,12 @@ class Slider(CombinedSprite):
         self._max_val = 100
 
         @self.pointer.event()
-        def onleftclick(pointer: Sprite, isClicked: bool):
+        def onleftclick(isClicked: bool):
             if isClicked:
                 self._clicked = True
 
         @self.pointer.event()
-        def onleftrelease(pointer: Sprite, isReleased: bool):
+        def onleftrelease(isReleased: bool):
             if self._clicked and isReleased:
                 self._clicked = False
                 pointer.construct('default')
