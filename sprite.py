@@ -28,7 +28,9 @@ class Sprite(pygame.sprite.Sprite):
 
 
     def update(self, delta_time: float = 1, *args: Any, **kwds: Any) -> None:
-        self.handle_event(pygame.Event(0, {}))
+        # NOTE: removed because it always reset the StatedSprites' state to default
+        # self.handle_event(pygame.Event(0, {}))
+        pass
 
 
     @property
@@ -186,7 +188,7 @@ class StatedSprite(Sprite):
             
             self.selected_state = state
             if change_selected:
-                self.style = self.states[state]
+                self.style = self.states[state].copy()
 
         elif state is None:
             self.style = {}
@@ -194,7 +196,7 @@ class StatedSprite(Sprite):
                 self.selected_state = None
 
         else:
-            self.style = state
+            self.style = state.copy()
             if change_selected:
                 self.selected_state = None
 
@@ -549,7 +551,7 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, T2]):
             
             self.selected_state = state
             if change_selected:
-                self.style = self.states[state]
+                self.style = self.states[state].copy()
 
         elif state is None:
             self.style = {}
@@ -557,7 +559,7 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, T2]):
                 self.selected_state = None
 
         else:
-            self.style = state
+            self.style = state.copy()
             if change_selected:
                 self.selected_state = None
 
