@@ -26,7 +26,7 @@ A hierarchy of sprite classes:
 
 
 - #### SpriteGroup
-    NOT WORKING YET
+    - Does not work with CombinedSprites
 
 
 - #### StatedSprite
@@ -58,6 +58,8 @@ A hierarchy of sprite classes:
     - `text_color:` color of the text
     - `text_pos:` position of the text. if not set, automatic centering is used. (Only used if `text` is set)
 
+    - `rect:` Rectangle of the sprite.
+
 
     **These are only used in a few types of sprites. If they can be used, it is mentioned in the docstring.**
 
@@ -66,21 +68,20 @@ A hierarchy of sprite classes:
     - `fg_rect:` rectangle where the foreground is placed. Mostly handled automatically.
 
 
-### Transition
-Smooth transitions between two states of a `sprite` or a `CombinedSprite`.
-- DOES NOT WORK WITH `CombinedSprite`s YET.
-- some easing functions might be buggy with some style keys.
-- 25 predifined easing functions
-- works with custom ones as well
+- ### Transition
+    Smooth transitions between two states of a `sprite` or a `CombinedSprite`.
+    - some easing functions might be buggy with some style keys.
+    - 25 predifined easing functions
+    - works with custom ones as well
 
 
-### CombinedSprite
-Sprites that are made up of multiple other sprites. (e.g. sliders)
+- ### CombinedSprite
+    Sprites that are made up of multiple other sprites. (e.g. sliders)
 
 
-### CombinedStatedSprite
-Sprites that are made up of multiple stated sprites. You can can create general states which include multiple sprites.
-- Not fully implemented yet
+- ### CombinedStatedSprite
+    Sprites that are made up of multiple stated sprites. You can can create general states which include multiple sprites.
+    - Not fully implemented yet
 
 
 
