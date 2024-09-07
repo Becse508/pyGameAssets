@@ -1,4 +1,2 @@
-
-
 class IncorrectColorError(Exception):
     pass

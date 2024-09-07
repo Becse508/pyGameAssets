@@ -11,7 +11,7 @@ class Sprite(pygame.sprite.Sprite):
     > one of these must have a value if you use 'auto'
     """
         
-    def __init__(self, image: pygame.Surface | Literal['auto'] = None, rect: pygame.Rect | Literal['auto'] = None, *groups):
+    def __init__(self, image: pygame.Surface | Literal['auto'] = None, rect: pygame.FRect | Literal['auto'] = None, *groups):
         super().__init__(*groups)
             
         self.image = image
@@ -36,11 +36,11 @@ class Sprite(pygame.sprite.Sprite):
     @property
     def nullrect(self):
         """A copy of the sprite's rect at position (0,0)"""
-        return pygame.Rect(0,0,self.rect.w,self.rect.h)
+        return pygame.FRect(0,0,self.rect.w,self.rect.h)
 
+   
 
-
-    def event(self, check: Callable | EventName | None = None, name: str | None = None):
+    def event(self, check: Callable | EventName | None = None, name: str | None = None, return_self: bool = False):
         """
         An event of the sprite. ALWAYS USE WITH BRACKETS
 
@@ -65,6 +65,7 @@ class Sprite(pygame.sprite.Sprite):
             1. You can use a Callable which returns a boolean
             2. Or one of the default event names. This will use thet event's check but register this as a new event with the given name.
                 (useful for having multiple events of the same type, e.g. keeping a default event while adding a new one too.)
+        - `return_self`: bool -> If true, the function will be called with these parameters: (self, check) istead of (check)
             
         
         
@@ -85,6 +86,9 @@ class Sprite(pygame.sprite.Sprite):
 
 
             def wrapper(sprite, event, *args, **kwargs):
+                if return_self:
+                    return func(sprite, check(sprite,event), *args, **kwargs)
+            
                 return func(check(sprite,event), *args, **kwargs)
 
 
@@ -94,11 +98,34 @@ class Sprite(pygame.sprite.Sprite):
             return wrapper
         return decorator
 
-    # FIXME: if there are no pygame events, some Sprites freeze because their events are not called.
-    def handle_event(self, event: pygame.Event):
+
+    def add_event(self, func: Callable, check: Callable | EventName | None = None, name: str | None = None, return_self: bool = False):
+        """Add an event without using the decorator"""
+        if name is None:
+            name = func.__name__
+        if check is None:
+            check = DEFAULT_EVENT_CHECKS.get(name, lambda _,__: True)
+        if check is None:
+            check = DEFAULT_EVENT_CHECKS.get(name, lambda _,__: True)
+        elif type(check) is str:
+            check = DEFAULT_EVENT_CHECKS.get(check, lambda _,__: True)
+
+        
+        def wrapper(sprite, event, *args, **kwargs):
+            if return_self:
+                return func(sprite, check(sprite,event), *args, **kwargs)
+        
+            return func(check(sprite,event), *args, **kwargs)
+
+        self.Events[name] = wrapper
+
+
+
+    def handle_event(self, event: pygame.Event, *args, **kwds):
         """Call this when looping through events."""
         for spriteEvent in self.Events.values():
-            spriteEvent(self, event)
+            spriteEvent(self, event, *args, **kwds)
+
 
     
     def draw(self, surf: pygame.Surface) -> None:
@@ -165,7 +192,7 @@ class StatedSprite(Sprite):
     ### Keywords
     - `Style` keys for the sprite's 'default' state
     """
-    def __init__(self, rect: pygame.Rect = None, *groups, **style):
+    def __init__(self, rect: pygame.FRect = None, *groups, **style):
         super().__init__(None, rect, *groups)
 
         self.states: dict[str, Style] = {
@@ -186,9 +213,9 @@ class StatedSprite(Sprite):
             if not self.states.get(state):
                 raise KeyError(f'{state} is not a valid state. (not in {self.__class__}.states)')
             
-            self.selected_state = state
+            self.style = self.states[state].copy()
             if change_selected:
-                self.style = self.states[state].copy()
+                self.selected_state = state
 
         elif state is None:
             self.style = {}
@@ -207,15 +234,11 @@ class StatedSprite(Sprite):
         
         rect = style.get('rect')
         if rect:
-            if style.get('check_rect_auto', True):
-                rect = [*rect]
-                for i in range(4):
-                    if rect[i] == 'auto':
-                        rect[i] = self.rect[i]
-                        
-
-            self.rect = pygame.Rect(rect)
-
+            _r = check_rect_auto(rect, self.rect, style.get('check_rect_auto', True))
+            self.rect.update(_r)
+            
+            
+            
 
         if reset_image:
             self.image = pygame.Surface(self.rect.size, pygame.SRCALPHA)
@@ -232,7 +255,7 @@ class StatedSprite(Sprite):
 
         # Foreground
         fg = style.get('fg')
-        fg_rect = style.get('fg_rect', pygame.Rect(0,0,0,0))
+        fg_rect = style.get('fg_rect', pygame.FRect(0,0,0,0))
         fg_radius = radius_kwds(style.get('fg_radius'))
 
         if fg:
@@ -268,7 +291,7 @@ class StatedSprite(Sprite):
             # Font.render parameters
             font_params = style.get('text_antialias', True ), style.get('text_color', (255,255,255))
 
-            rect_without_border = pygame.Rect(
+            rect_without_border = pygame.FRect(
                 self.rect.left+border_width-10,
                 self.rect.top+border_width-10,
                 self.rect.w-border_width-10,
@@ -302,7 +325,7 @@ class StatedSprite(Sprite):
             # pygame.draw.arc(
             #     self.image,
             #     (0,0,0,0),
-            #     pygame.Rect(
+            #     pygame.FRect(
             #         -dist,
             #         -dist,
             #         border_radius['border_top_left_radius']*2+dist,
@@ -317,7 +340,7 @@ class StatedSprite(Sprite):
             # pygame.draw.arc(
             #     self.image,
             #     (0,0,0,0),
-            #     pygame.Rect(
+            #     pygame.FRect(
             #         self.rect.w-border_radius['border_top_right_radius']*2,
             #         -dist,
             #         border_radius['border_top_left_radius']*2+dist,
@@ -371,7 +394,7 @@ class StatedSprite(Sprite):
 
 
 
-    def transition(self, state: str | Style, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', ignore_scheck = False):
+    def transition(self, state: str | Style, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', force = False):
         """
         Transitions the sprite to the given state.
         ### parameters:
@@ -380,10 +403,10 @@ class StatedSprite(Sprite):
         - `*style_keys:` A list of style keys you want to transition.
         - `_all:` Ignore `style_keys` and transition everything.
         - `easing:` The easing function to use. See `sprites.EASING_FUNCTIONS`
-        - `ignore_scheck:` Do the transition even when the selected state is already tha state you are transitioning into.
+        - `force:` Do the transition even when the selected state is already tha state you are transitioning into.
         """
         if type(state) is str:
-            if not ignore_scheck:
+            if not force:
                 if state == self.selected_state:
                     return
                 
@@ -401,18 +424,11 @@ class StatedSprite(Sprite):
 
         rect = _state.get('rect')
         if rect:
-            rect = [*rect]
-            if _state.get('check_rect_auto', True):
-                for i in range(4):
-                    if rect[i] == 'auto':
-                        rect[i] = self.rect[i]
-
-            _state['rect'] = rect
+            _state['rect'] = check_rect_auto(rect, self.rect, _state.get('check_rect_auto', True))
             _state['check_rect_auto'] = False
-        
-        self.style['rect'] = [*self.rect]
+            self.style['rect'] = [*self.rect]
 
-        
+
         self._transition = None
         self._transition = Transition(time, self.style, _state,style_keys, _all=_all, easing=easing)
             
@@ -443,7 +459,7 @@ T2 = TypeVar('T2')
 
 class GenericCombinedSprite(dict[T1, T2]):
     """Generic class for CombinedSprite"""
-    def __init__(self, rect: pygame.Rect = None, **sprites: T2):
+    def __init__(self, rect: pygame.FRect = None, **sprites: T2):
         """Generic class for CombinedSprite"""
         super().__init__(**sprites)
 
@@ -456,10 +472,11 @@ class GenericCombinedSprite(dict[T1, T2]):
             sprite.update(delta_time)
 
 
+    # TODO: optimize this so it doesn't run multiple times each frame
     def handle_event(self, event: pygame.Event):
         for sprite in self.values():
             rect = sprite.rect.copy()
-            sprite.rect = pygame.Rect(self.rect.left + sprite.rect.left,
+            sprite.rect = pygame.FRect(self.rect.left + sprite.rect.left,
                                self.rect.top + sprite.rect.top,
                                sprite.rect.width,
                                sprite.rect.height)
@@ -510,7 +527,7 @@ class CombinedSprite(GenericCombinedSprite[str, Sprite]):
     """
 
     # only needed for docsting
-    def __init__(self, rect: pygame.Rect = None, **sprites: Sprite):
+    def __init__(self, rect: pygame.FRect = None, **sprites: Sprite):
         """
         Base class for all sprites that are made up of multiple parts.
         """
@@ -518,11 +535,10 @@ class CombinedSprite(GenericCombinedSprite[str, Sprite]):
 
 
 
-# TODO: replace StatedSprite with T2
 class GenericCombinedStatedSprite(GenericCombinedSprite[T1, T2]):
     """Generic class for CombinedStatedSprite."""
     
-    def __init__(self, rect: pygame.Rect = None, **sprites):
+    def __init__(self, rect: pygame.FRect = None, **sprites):
         
         super().__init__(rect, **sprites)
         # EXAMPLE:
@@ -571,12 +587,20 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, T2]):
 
 
 
-    # TODO: make this
-    def construct(self, style: str | CombinedStyle | None):
-        """Constructs all of its Sprites from the selected style."""
+    def construct(self, style: str | CombinedStyle | None, force=False):
+        """
+        Constructs all of its Sprites from the selected style.
+        - `force`: reconstruct the sprite even if its selected state is the same as the `style` parameter.
+        """
         if type(style) is str:
+            if not force and style == self.selected_state:
+                return
+            
             for key, sprite in self.items():
-                sprite.construct(style[key])
+                try:
+                    sprite.construct(self.states[style][key])
+                except:
+                    raise KeyError(f'{style} is not a valid state. (not in {sprite.__class__}.states)')
         
         elif type(style) is CombinedStyle:
             for key, sprite in self.items():
@@ -585,8 +609,8 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, T2]):
         
 
 
-    # TODO: Improve for custom parameters per sprite.
-    def transition(self, state: str, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', ignore_scheck = False):
+    # TODO: Improve for custom parameters per sprite if possible.
+    def transition(self, state: str, time: int, *style_keys, _all=False, easing: EasingName | Callable = 'linear', force = False):
         """
         Transitions the sprite to the given state.
         ### parameters:
@@ -595,11 +619,11 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, T2]):
         - `*style_keys:` A list of style keys you want to transition.
         - `_all:` Ignore `style_keys` and transition everything.
         - `easing:` The easing function to use. See `sprites.EASING_FUNCTIONS`
-        - `ignore_scheck:` Do the transition even when the selected state is already the state you are transitioning into.
+        - `force:` Do the transition even when the selected state is already the state you are transitioning into.
         """
         # raise Exception('This is not working yet.')
         if type(state) is str:
-            if not ignore_scheck:
+            if not force:
                 if state == self.selected_state:
                     return
                 
@@ -610,7 +634,7 @@ class GenericCombinedStatedSprite(GenericCombinedSprite[T1, T2]):
             self.change_style(state)
             
             for key, sprite in self.items():
-                sprite.transition(state[key], time, style_keys, _all=_all, easing=easing, ignore_scheck=ignore_scheck)
+                sprite.transition(state[key], time, style_keys, _all=_all, easing=easing, force=force)
 
 
 
@@ -626,7 +650,7 @@ class CombinedStatedSprite(GenericCombinedStatedSprite[str, StatedSprite]):
     """Base class for all sprites that are made up of multiple stated sprites. You can can create general states which include multiple sprites."""
 
     # only needed for docstring
-    def __init__(self, rect: pygame.Rect = None, **sprites):
+    def __init__(self, rect: pygame.FRect = None, **sprites):
         """Base class for all sprites that are made up of multiple stated sprites. You can can create general states which include multiple sprites."""
         super().__init__(rect, **sprites)
 
@@ -638,7 +662,7 @@ class AnimatedSprite(StatedSprite):
     
     ### 
     """
-    def __init__(self, rect: pygame.Rect = None, *groups, **kwds):
+    def __init__(self, rect: pygame.FRect = None, *groups, **kwds):
         super().__init__(None, rect, *groups, **kwds)
 
 

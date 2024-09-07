@@ -44,9 +44,20 @@ class Animation:
     @overload
     def __init__(self, _dir: str, speed: int = 1, flip=(False,False), **kwds): ...
     @overload
-    def __init__(self, file: str, size: Coordinate = (32,32), start: Coordinate = (0,0), end: int = None, step: Literal['horizontal', 'vertical'] = 'horizontal', speed: int = 1, flip=(False,False), **kwds): ...
+    def __init__(self, file: str, size: Coordinate = (32,32), start: Coordinate = (0,0), end: int | None = None, step: Literal['horizontal', 'vertical'] = 'horizontal', speed: int = 1, flip=(False,False), **kwds): ...
 
-    def __init__(self, file: str = None, size: Coordinate = (32,32), start: Coordinate = (0,0), end: int = None, step: Literal['horizontal', 'vertical'] = 'horizontal', files: list[str] = None, _dir: str = None, speed: int = 1, flip=(False,False), **kwds):
+    def __init__(self,
+                 file: str | None = None,
+                 size: Coordinate = (32,32),
+                 start: Coordinate = (0,0),
+                 end: int | None = None,
+                 step: Literal['horizontal', 'vertical'] = 'horizontal',
+                 files: list[str] | None = None,
+                 _dir: str | None = None,
+                 speed: int = 1,
+                 flip=(False,False),
+                 **kwds):
+        
         self.frames = []
         self.frame_index = 0
         self.speed = speed
@@ -151,11 +162,11 @@ class Animation:
 
     
     @overload
-    def blit_params(self, rect: pygame.Rect) -> tuple[pygame.Surface, Coordinate]: ...
+    def blit_params(self, rect: pygame.FRect) -> tuple[pygame.Surface, Coordinate]: ...
     @overload
     def blit_params(self, pos: Coordinate) -> tuple[pygame.Surface, Coordinate]: ...
 
-    def blit_params(self, rect: pygame.Rect = None, pos: Coordinate = None) -> tuple[pygame.Surface, Coordinate]:
+    def blit_params(self, rect: pygame.FRect | None = None, pos: Coordinate | None = None) -> tuple[pygame.Surface, Coordinate]:
         """
         Returns the current frame with the position (with offset) of the animation, relative to the given position or Rect.
 
@@ -214,7 +225,7 @@ class Style(TypedDict):
 
     fg: ColorValue
     fg_radius: int | tuple[int,int,int,int]
-    fg_rect: pygame.Rect
+    fg_rect: pygame.FRect
 
     border: ColorValue
     border_width: int
@@ -232,7 +243,7 @@ class Style(TypedDict):
 
     anim: Animation
 
-    rect: Sequence[int | Literal['auto']]
+    rect: Sequence[int | Literal['auto']] | pygame.FRect
     check_rect_auto: bool
 
 
@@ -315,7 +326,7 @@ class Transition:
         if type(easing) is str:
             self.easing_func = EASING_FUNCTIONS.get(easing)
             if self.easing_func is None:
-                raise KeyError(f"Invalid easing function: '{easing}'")
+                raise KeyError(f"Invalid easing function name: '{easing}'")
             
         elif type(easing) is Callable:
             self.easing_func = easing
@@ -398,7 +409,6 @@ class Transition:
         if self.current_time >= self.time:
             self.finished = True
 
-
         return self.style
 
 
@@ -406,7 +416,7 @@ class Transition:
 
 
 
-def auto_sized_text(text: str, font: pygame.Font, font_params, border_rect: pygame.Rect):
+def auto_sized_text(text: str, font: pygame.Font, font_params, border_rect: pygame.FRect):
     if type(font_params) is tuple:
         textSurface = font.render(text, *font_params).convert_alpha()
     elif type(font_params) is dict:
@@ -483,3 +493,19 @@ def to_rgba(color: ColorValue | None) -> tuple[int,int,int,int]:
     return tuple(color)
 
 
+def check_rect_auto(rect, rect2 = None, check: bool = True) -> list[int, int, int, int]:
+    if isinstance(rect, pygame.FRect):
+        return [*rect]
+    
+    # FIXME: this does not run at all
+    else:
+        rect = [*rect]
+        if check and rect2 is not None:
+            for i in range(4):
+                if rect[i] == 'auto':
+                    rect[i] = rect2[i]
+        
+        return rect
+    
+
+    

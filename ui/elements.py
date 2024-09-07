@@ -7,7 +7,7 @@ from ..sprite import *
 
 class Button(StatedSprite):
     def __init__(self,
-                 rect: pygame.Rect = None,
+                 rect: pygame.FRect = None,
                  text: str = None,
                  bg = (0,0,0,0),
                  border = (50,50,50),
@@ -40,10 +40,10 @@ class Button(StatedSprite):
         # Events
         @self.event()
         def onhover(isHovered: bool):
-            if isHovered and self.selected_state != 'hover':
+            if isHovered:
                 self.construct('hover')
 
-            elif not isHovered and self.selected_state == 'hover':
+            elif not isHovered:
                 self.construct('default')
 
 
@@ -69,7 +69,7 @@ class ProgressBar(StatedSprite):
     - `fg_radius:` rounding of the inner color
     """
     def __init__(self,
-                 rect: pygame.Rect = None, bg = (0,0,0,0),
+                 rect: pygame.FRect = None, bg = (0,0,0,0),
                  fg = (160,0,0),
                  border = (100,100,100),
                  **style):
@@ -112,7 +112,7 @@ class ProgressBar(StatedSprite):
     def _construct(self, **kwds):
         
         fg_w = self.rect.w * (self.value/self.max_val)
-        super()._construct(fg_rect=pygame.Rect(0, 0, fg_w, self.rect.h), **kwds)
+        super()._construct(fg_rect=pygame.FRect(0, 0, fg_w, self.rect.h), **kwds)
 
 
 
@@ -120,7 +120,7 @@ class ProgressBar(StatedSprite):
 
 class Switch(CombinedStatedSprite):
     def __init__(self,
-                 rect: pygame.Rect = None,
+                 rect: pygame.FRect = None,
                  body: StatedSprite | None = None,
                  pointer: StatedSprite | None = None,
                  vertical = False):
@@ -128,35 +128,51 @@ class Switch(CombinedStatedSprite):
         # Dimension
         # 0 = horizontal (x); 1 = vertical (y)
         self._dim = int(vertical)
+        self._value = False
 
 
         if body is None:
-            _brect = pygame.Rect(0,0,rect.w,rect.h)
+            _brect = pygame.FRect(0,0,rect.w,rect.h)
             body = Button(_brect,background=(100,100,100), border=(50,50,50), border_radius=1000)
 
         if pointer is None:
-            pointer = Button(pygame.Rect(0,0,rect.size[self._dim-1],rect.size[self._dim-1]), bg=(50,50,50), border=(0,0,0), border_radius=1000)
-
-        @body.event
-        def onclick(isClicked):
-            if isClicked:
-                self.switch()
-                self.construct(str(self._value))
-
+            pointer = Button(pygame.FRect(0,0,rect.size[self._dim-1],rect.size[self._dim-1]), bg=(50,50,50), border=(0,0,0), border_radius=1000)
 
         super().__init__(rect, body=body, pointer=pointer)
 
         self.pointer: StatedSprite
         self.body: StatedSprite
 
-        self._value = False
+        @body.event()
+        def onclick(isClicked):
+            if isClicked:
+                self.switch()
+
+        def onhover(sprite: StatedSprite, isHovered):
+            if isHovered:
+                sprite.construct('hover')
+            elif self._value:
+                sprite.construct('on')
+            else:
+                sprite.construct('default')
+        
+
+        body.add_event(onhover, return_self=True)
+        pointer.add_event(onhover, return_self=True)
 
 
-        self.states['0'] = self.states['default'].copy()
-        del self.states['default']
-        self.states['1'] = {
-            'body': ''
 
+        self.body.states['on'] = self.body.states['default'].copy()
+        self.body.states['on']['bg'] = (53,103,219)
+        self.pointer.states['on'] = self.pointer.states['default'].copy()
+        self.pointer.states['on']['bg'] = (255,255,255)
+        self.pointer.states['default']['rect'] = (0,0,'auto','auto')
+        self.pointer.states['on']['rect'] = (self.rect.w-self.pointer.rect.w,0,'auto','auto')
+
+
+        self.states['on'] = {
+            'body': 'on',
+            'pointer': 'on'
         }
 
 
@@ -172,9 +188,9 @@ class Switch(CombinedStatedSprite):
 
     def switch(self):
         self.value = not self.value
+        self.construct('on' if self._value else 'default')
 
     
-
 
 
 
@@ -184,7 +200,7 @@ class Slider(CombinedSprite):
     If no body and pointer sprites are set, the default slider style will be used.
     """
     def __init__(self, 
-                 rect: pygame.Rect | None = None,
+                 rect: pygame.FRect | None = None,
                  body: Sprite | None = None,
                  pointer: Sprite | None = None,
                  vertical = False):
@@ -201,17 +217,17 @@ class Slider(CombinedSprite):
 
         if body is None:
             if self._dim == 0:
-                _brect = pygame.Rect(0,0,rect.w,rect.h//2)
+                _brect = pygame.FRect(0,0,rect.w,rect.h//2)
                 _brect.centery = rect.h//2
             else:
-                _brect = pygame.Rect(0,0,rect.w//2,rect.h)
+                _brect = pygame.FRect(0,0,rect.w//2,rect.h)
                 _brect.centerx = rect.w//2
 
             body = StatedSprite(_brect,background=(100,100,100), border=(50,50,50), border_radius=1000)
 
 
         if pointer is None:
-            pointer = Button(pygame.Rect(0,0,rect.size[self._dim-1],rect.size[self._dim-1]), bg=(50,50,50), border=(0,0,0), border_radius=1000)
+            pointer = Button(pygame.FRect(0,0,rect.size[self._dim-1],rect.size[self._dim-1]), bg=(50,50,50), border=(0,0,0), border_radius=1000)
 
         @pointer.event()
         def onhover(isHovered: bool):
@@ -229,6 +245,7 @@ class Slider(CombinedSprite):
         self.body: Sprite
 
 
+        # TODO: add min_val
         self._clicked = False
         self._value = 0
         self._max_val = 100
@@ -259,7 +276,7 @@ class Slider(CombinedSprite):
         pass
 
 
-
+    # FIXME: the value is not exactly between 0 and max
     def update(self, delta_time: float = 1):
         super().update(delta_time)
 
